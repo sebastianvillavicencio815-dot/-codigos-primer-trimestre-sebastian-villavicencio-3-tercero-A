@@ -1,0 +1,52 @@
+
+#include "BluetoothSerial.h"
+
+BluetoothSerial SerialBT;
+
+// Pines de los LEDs
+const int LED1 = 2;
+const int LED2 = 4;
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+
+  digitalWrite(LED1, LOW);
+  digitalWrite(LED2, LOW);
+
+  // Iniciar Bluetooth
+  SerialBT.begin("pollo");
+
+  Serial.println("Bluetooth iniciado");
+  Serial.println("Nombre: pollo");
+}
+
+void loop() {
+
+  if (SerialBT.available()) {
+
+    char dato = SerialBT.read();
+
+    if (dato == '1') {
+      digitalWrite(LED1, HIGH);
+      Serial.println("LED 1 ENCENDIDO");
+    }
+
+    if (dato == '0') {
+      digitalWrite(LED1, LOW);
+      Serial.println("LED 1 APAGADO");
+    }
+
+    if (dato == '2') {
+      digitalWrite(LED2, HIGH);
+      Serial.println("LED 2 ENCENDIDO");
+    }
+
+    if (dato == '3') {
+      digitalWrite(LED2, LOW);
+      Serial.println("LED 2 APAGADO");
+    }
+  }
+}
