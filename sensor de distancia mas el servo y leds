@@ -1,1 +1,148 @@
 
+#include "BluetoothSerial.h"
+#include <ESP32Servo.h>
+
+BluetoothSerial SerialBT;
+Servo servo;
+
+// PINES
+const int TRIG = 23;
+const int ECHO = 22;
+const int PIN_SERVO = 18;
+const int LED_ROJO = 21;
+const int LED_VERDE = 19;
+
+// ANGULOS DEL SERVO
+const int CERRADO = 0;
+const int ABIERTO = 90;
+
+// DISTANCIAS
+const int DISTANCIA_ABRIR = 20;
+const int DISTANCIA_CERRAR = 25;
+
+bool puertaAbierta = false;
+bool controlManual = false;
+
+float distancia = 0;
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+
+  pinMode(LED_ROJO, OUTPUT);
+  pinMode(LED_VERDE, OUTPUT);
+
+  servo.setPeriodHertz(50);
+  servo.attach(PIN_SERVO, 500, 2400);
+
+  // Iniciar puerta cerrada
+  servo.write(CERRADO);
+  digitalWrite(LED_ROJO, HIGH);
+  digitalWrite(LED_VERDE, LOW);
+
+  // Bluetooth
+  SerialBT.begin("sebastian");
+
+  Serial.println("SISTEMA INICIADO");
+  Serial.println("Bluetooth: sebastian");
+  Serial.println("PUERTA CERRADA");
+}
+
+float medirDistancia() {
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+
+  long duracion = pulseIn(ECHO, HIGH, 30000);
+
+  if (duracion == 0) {
+    return -1;
+  }
+
+  return duracion * 0.0343 / 2;
+}
+
+void abrirPuerta() {
+  servo.write(ABIERTO);
+
+  puertaAbierta = true;
+
+  digitalWrite(LED_ROJO, LOW);
+  digitalWrite(LED_VERDE, HIGH);
+
+  Serial.println("PUERTA ABIERTA");
+  SerialBT.println("PUERTA ABIERTA");
+}
+
+void cerrarPuerta() {
+  servo.write(CERRADO);
+
+  puertaAbierta = false;
+
+  digitalWrite(LED_ROJO, HIGH);
+  digitalWrite(LED_VERDE, LOW);
+
+  Serial.println("PUERTA CERRADA");
+  SerialBT.println("PUERTA CERRADA");
+}
+
+void loop() {
+
+  // CONTROL BLUETOOTH
+  if (SerialBT.available()) {
+
+    char dato = SerialBT.read();
+
+    if (dato == 'C' || dato == 'c') {
+      controlManual = true;
+      abrirPuerta();
+    }
+
+    if (dato == 'L' || dato == 'l') {
+      controlManual = true;
+      cerrarPuerta();
+    }
+
+    if (dato == 'A' || dato == 'a') {
+      controlManual = false;
+      Serial.println("MODO AUTOMATICO");
+      SerialBT.println("MODO AUTOMATICO");
+    }
+  }
+
+  // MEDIR DISTANCIA
+  distancia = medirDistancia();
+
+  if (distancia > 0) {
+
+    Serial.print("Distancia: ");
+    Serial.print(distancia);
+    Serial.println(" cm");
+
+    SerialBT.println(distancia);
+
+    // MODO AUTOMATICO
+    if (!controlManual) {
+
+      if (distancia < DISTANCIA_ABRIR && !puertaAbierta) {
+        abrirPuerta();
+      }
+
+      if (distancia > DISTANCIA_CERRAR && puertaAbierta) {
+        cerrarPuerta();
+      }
+    }
+
+  } else {
+    Serial.println("ERROR DEL SENSOR");
+    SerialBT.println("-1");
+  }
+
+  delay(200);
+}
+
