@@ -1,0 +1,173 @@
+#include "BluetoothSerial.h"
+#include <ESP32Servo.h>
+#include "esp_mac.h"
+#include "WiFi.h"
+
+BluetoothSerial SerialBT;
+Servo myServo;
+
+// Pines
+const int TRIG = 23;
+const int ECHO = 22;
+const int PIN_SERVO = 18;
+
+const int LED_ROJO = 19;
+const int LED_VERDE = 21;
+
+// Angulos del servo
+const int CERRADO = 110;
+const int ABIERTO = 0;
+
+// Distancias
+const int DISTANCIA_ABRIR = 20;
+const int DISTANCIA_CERRAR = 25;
+
+long tiempo;
+int distancia = 0;
+int ultimaDistancia = 0;
+
+bool carroDetectado = false;
+
+// Mostrar MAC en la computadora
+void mostrarMAC(esp_mac_type_t tipo, const char* nombre) {
+  uint8_t mac[6];
+
+  esp_read_mac(mac, tipo);
+
+  Serial.print(nombre);
+  Serial.print(": ");
+
+  for (int i = 0; i < 6; i++) {
+    if (mac[i] < 16) Serial.print("0");
+
+    Serial.print(mac[i], HEX);
+
+    if (i < 5) Serial.print(":");
+  }
+
+  Serial.println();
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  // Bluetooth
+  SerialBT.begin("VILLA");
+
+  Serial.println("==========================");
+  Serial.println("BARRERA AUTOMATICA");
+  Serial.println("BLUETOOTH: VILLA");
+  Serial.println("==========================");
+
+  // MAC solamente en computadora
+  mostrarMAC(ESP_MAC_BT, "MAC BLUETOOTH");
+  mostrarMAC(ESP_MAC_WIFI_STA, "MAC WIFI");
+
+  Serial.println("BARRERA LISTA");
+
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+
+  pinMode(LED_ROJO, OUTPUT);
+  pinMode(LED_VERDE, OUTPUT);
+
+  myServo.setPeriodHertz(50);
+  myServo.attach(PIN_SERVO, 500, 2400);
+
+  myServo.write(CERRADO);
+
+  digitalWrite(LED_ROJO, HIGH);
+  digitalWrite(LED_VERDE, LOW);
+}
+
+void loop() {
+
+  leerDistancia();
+
+  // Mostrar centimetros en computadora
+  Serial.print("Distancia: ");
+  Serial.print(ultimaDistancia);
+  Serial.println(" cm");
+
+  // Enviar SOLAMENTE centimetros a la aplicacion
+  SerialBT.println(ultimaDistancia);
+
+  // Detectar carro
+  if (distancia > 0 &&
+      distancia <= DISTANCIA_ABRIR &&
+      !carroDetectado) {
+
+    carroDetectado = true;
+
+    Serial.println("CARRO DETECTADO");
+    Serial.println("PUEDE PASAR");
+
+    digitalWrite(LED_ROJO, LOW);
+    digitalWrite(LED_VERDE, HIGH);
+
+    abrirPuerta();
+  }
+
+  // Cuando el carro se aleja
+  if (distancia > DISTANCIA_CERRAR && carroDetectado) {
+
+    carroDetectado = false;
+
+    Serial.println("CARRO HA PASADO");
+    Serial.println("NO PASAR");
+
+    cerrarPuerta();
+
+    digitalWrite(LED_VERDE, LOW);
+    digitalWrite(LED_ROJO, HIGH);
+  }
+
+  delay(200);
+}
+
+void leerDistancia() {
+
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+
+  digitalWrite(TRIG, LOW);
+
+  tiempo = pulseIn(ECHO, HIGH, 60000);
+
+  if (tiempo > 0) {
+
+    distancia = tiempo / 58;
+
+    if (distancia > 0) {
+      ultimaDistancia = distancia;
+    }
+
+  } else {
+    distancia = 0;
+  }
+}
+
+void abrirPuerta() {
+
+  for (int angulo = CERRADO;
+       angulo >= ABIERTO;
+       angulo--) {
+
+    myServo.write(angulo);
+    delay(10);
+  }
+}
+
+void cerrarPuerta() {
+
+  for (int angulo = ABIERTO;
+       angulo <= CERRADO;
+       angulo++) {
+
+    myServo.write(angulo);
+    delay(10);
+  }
+}
