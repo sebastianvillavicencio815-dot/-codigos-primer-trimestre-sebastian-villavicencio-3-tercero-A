@@ -1,0 +1,55 @@
+
+#include <WiFi.h>
+
+// Datos del WiFi
+const char* ssid = "Sebastián";
+const char* password = "123456789";
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+
+  Serial.println();
+  Serial.println("CONECTANDO AL WIFI...");
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println();
+  Serial.println("============================");
+  Serial.println("     WIFI CONECTADO");
+  Serial.println("============================");
+
+  // Nombre de la red
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+
+  // Direccion IP
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
+
+  // Direccion MAC
+  Serial.print("MAC: ");
+  Serial.println(WiFi.macAddress());
+
+  // Mascara de red
+  Serial.print("Mascara: ");
+  Serial.println(WiFi.subnetMask());
+
+  // Puerta de enlace
+  Serial.print("Gateway: ");
+  Serial.println(WiFi.gatewayIP());
+
+  // DNS
+  Serial.print("DNS: ");
+  Serial.println(WiFi.dnsIP());
+
+  Serial.println("============================");
+}
+
+void loop() {
+}
