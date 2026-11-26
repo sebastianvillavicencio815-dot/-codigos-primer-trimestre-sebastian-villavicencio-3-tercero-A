@@ -1,0 +1,84 @@
+
+#include "BluetoothSerial.h"
+
+BluetoothSerial SerialBT;
+
+// PINES
+const int TRIG = 23;
+const int ECHO = 22;
+
+const int LED_ROJO = 19;
+const int LED_VERDE = 21;
+
+// DISTANCIA LIMITE
+const int DISTANCIA_LIMITE = 20;
+
+float distancia;
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+
+  pinMode(LED_ROJO, OUTPUT);
+  pinMode(LED_VERDE, OUTPUT);
+
+  digitalWrite(LED_ROJO, LOW);
+  digitalWrite(LED_VERDE, LOW);
+
+  // INICIAR BLUETOOTH
+  SerialBT.begin("sebastian");
+
+  Serial.println("SENSOR DE DISTANCIA INICIADO");
+  Serial.println("Bluetooth: sebastian");
+}
+
+void loop() {
+
+  // MEDIR DISTANCIA
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(2);
+
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+
+  long duracion = pulseIn(ECHO, HIGH, 30000);
+
+  if (duracion == 0) {
+    Serial.println("ERROR DEL SENSOR");
+    delay(200);
+    return;
+  }
+
+  distancia = duracion * 0.0343 / 2;
+
+  Serial.print("Distancia: ");
+  Serial.print(distancia);
+  Serial.println(" cm");
+
+  // ENVIAR DISTANCIA POR BLUETOOTH
+  SerialBT.print(distancia);
+  SerialBT.println(" cm");
+
+  // CONTROL DE LOS LEDS
+  if (distancia < DISTANCIA_LIMITE) {
+
+    digitalWrite(LED_ROJO, HIGH);
+    digitalWrite(LED_VERDE, LOW);
+
+    Serial.println("OBJETO CERCANO");
+    SerialBT.println("ROJO");
+
+  } else {
+
+    digitalWrite(LED_ROJO, LOW);
+    digitalWrite(LED_VERDE, HIGH);
+
+    Serial.println("OBJETO LEJANO");
+    SerialBT.println("VERDE");
+  }
+
+  delay(200);
+}
