@@ -1,0 +1,75 @@
+
+#include "BluetoothSerial.h"
+
+BluetoothSerial SerialBT;
+
+// Pines
+const int RELE = 26;
+const int SENSOR_APLAUSO = 25;
+
+// Estado del relé
+bool releEncendido = false;
+int estadoAnterior = LOW;
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(RELE, OUTPUT);
+  pinMode(SENSOR_APLAUSO, INPUT);
+
+  // Relé activo en LOW
+  digitalWrite(RELE, HIGH);
+
+  // Iniciar Bluetooth
+  SerialBT.begin("VILLA");
+
+  Serial.println("BLUETOOTH INICIADO");
+  Serial.println("Nombre: VILLA");
+  Serial.println("RELE LISTO");
+}
+
+void loop() {
+
+  // CONTROL POR BLUETOOTH
+  if (SerialBT.available()) {
+
+    char dato = SerialBT.read();
+
+    if (dato == 'A') {
+      releEncendido = true;
+      digitalWrite(RELE, LOW);
+      Serial.println("RELE ENCENDIDO");
+      SerialBT.println("RELE ENCENDIDO");
+    }
+
+    if (dato == 'a') {
+      releEncendido = false;
+      digitalWrite(RELE, HIGH);
+      Serial.println("RELE APAGADO");
+      SerialBT.println("RELE APAGADO");
+    }
+
+    if (dato == '?') {
+      SerialBT.println(releEncendido ? 
+      "RELE ENCENDIDO" : "RELE APAGADO");
+    }
+  }
+
+  // CONTROL POR SENSOR DE APLAUSOS
+  int lectura = digitalRead(SENSOR_APLAUSO);
+
+  if (lectura == HIGH && estadoAnterior == LOW) {
+
+    releEncendido = !releEncendido;
+
+    digitalWrite(RELE, releEncendido ? LOW : HIGH);
+
+    Serial.println(releEncendido ?
+    "APLAUSO: RELE ENCENDIDO" :
+    "APLAUSO: RELE APAGADO");
+
+    delay(300);
+  }
+
+  estadoAnterior = lectura;
+}
